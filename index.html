@@ -1,104 +1,192 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chore Points</title>
+  <title>Family Points System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; margin: 0; background:#f4f4f4; }
-    .header { background:#333; color:white; padding:15px; text-align:center; font-size:22px; }
-    .container { padding:15px; }
-
-    .card { background:white; padding:15px; margin:10px 0; border-radius:10px; }
-
-    button {
-      padding:10px;
-      margin:5px;
-      border:0;
-      border-radius:8px;
-      cursor:pointer;
-    }
-
-    .green { background: #4CAF50; color:white; }
-    .blue { background: #2196F3; color:white; }
-    .red { background: #f44336; color:white; }
-
-    input {
-      padding:8px;
-      margin:5px 0;
-      width:100%;
-    }
-
-    .big { font-size:24px; text-align:center; }
+    body { font-family: Arial; margin:0; background:#111; color:white; }
+    .header { background:#222; padding:20px; text-align:center; font-size:26px; }
+    .tabs { display:flex; justify-content:center; gap:10px; padding:10px; flex-wrap:wrap; }
+    button { padding:12px 16px; border:none; border-radius:10px; cursor:pointer; font-size:16px; }
+    .card { background:#1e1e1e; margin:10px; padding:15px; border-radius:12px; }
+    input, select { width:100%; padding:10px; margin:5px 0; border-radius:8px; border:none; }
+    .green { background:#4CAF50; color:white; }
+    .blue { background:#2196F3; color:white; }
+    .red { background:#f44336; color:white; }
+    .yellow { background:#ff9800; color:white; }
+    .big { font-size:28px; text-align:center; }
   </style>
 </head>
 
 <body>
 
-<div class="header">Family Chore Points</div>
+<div class="header">🏠 Family Points System</div>
 
-<div class="container">
-
-  <div class="card">
-    <h3>Add Chore (Parent)</h3>
-    <input id="choreName" placeholder="Chore name">
-    <input id="points" type="number" placeholder="Points">
-    <button class="green" onclick="addChore()">Add</button>
-  </div>
-
-  <div class="card">
-    <h3>Chores</h3>
-    <div id="chores"></div>
-  </div>
-
-  <div class="card">
-    <h3 class="big">Leaderboard</h3>
-    <div id="leaderboard"></div>
-  </div>
-
+<div class="tabs">
+  <button class="blue" onclick="setMode('kid')">Kid Mode</button>
+  <button class="yellow" onclick="setMode('parent')">Parent Mode</button>
+  <button class="green" onclick="setMode('echo')">Echo Show</button>
 </div>
 
+<div class="card">
+  <div class="big">Select Kid</div>
+  <select id="kidSelect" onchange="render()"></select>
+</div>
+
+<div id="app"></div>
+
 <script>
-let chores = [];
-let points = { Kid1: 0, Kid2: 0 };
+let mode = "kid";
 
-function addChore() {
-  let name = document.getElementById('choreName').value;
-  let pts = parseInt(document.getElementById('points').value);
+let data = JSON.parse(localStorage.getItem("familyData")) || {
+  kids: [
+    { name: "Kid 1", points: 0 },
+    { name: "Kid 2", points: 0 }
+  ],
+  chores: [],
+  rewards: []
+};
 
-  if (!name || !pts) return;
+function save() {
+  localStorage.setItem("familyData", JSON.stringify(data));
+}
 
-  chores.push({ name, pts, done:false });
+function setMode(m) {
+  mode = m;
   render();
 }
 
-function markDone(index) {
-  let chore = chores[index];
-  if (chore.done) return;
+function getKid() {
+  let i = document.getElementById("kidSelect").value;
+  return data.kids[i];
+}
 
-  chore.done = true;
-  points.Kid1 += chore.pts;
+function renderKidsDropdown() {
+  let sel = document.getElementById("kidSelect");
+  sel.innerHTML = "";
+  data.kids.forEach((k,i)=>{
+    sel.innerHTML += `<option value="${i}">${k.name}</option>`;
+  });
+}
 
+function addChore() {
+  let name = document.getElementById("choreName").value;
+  let pts = parseInt(document.getElementById("chorePoints").value);
+
+  if(!name || !pts) return;
+
+  data.chores.push({
+    name,
+    pts,
+    kid: document.getElementById("kidSelect").value,
+    done:false,
+    approved:false
+  });
+
+  save();
+  render();
+}
+
+function completeChore(i) {
+  data.chores[i].done = true;
+  save();
+  render();
+}
+
+function approveChore(i) {
+  let c = data.chores[i];
+  if(c.approved) return;
+
+  c.approved = true;
+  data.kids[c.kid].points += c.pts;
+
+  save();
+  render();
+}
+
+function addReward() {
+  let name = document.getElementById("rewardName").value;
+  let cost = parseInt(document.getElementById("rewardCost").value);
+
+  if(!name || !cost) return;
+
+  data.rewards.push({ name, cost });
+  save();
   render();
 }
 
 function render() {
-  let cDiv = document.getElementById('chores');
-  cDiv.innerHTML = "";
+  renderKidsDropdown();
 
-  chores.forEach((c, i) => {
-    cDiv.innerHTML += `
+  let kid = getKid();
+  let app = document.getElementById("app");
+
+  let html = "";
+
+  if(mode === "echo") {
+    html += `<div class="card big">📊 Leaderboard</div>`;
+    data.kids.forEach(k=>{
+      html += `<div class="card big">${k.name}: ${k.points} pts</div>`;
+    });
+  }
+
+  if(mode === "kid") {
+    html += `<div class="card big">🧒 Kid View</div>`;
+    html += `<div class="card">Points: ${kid.points}</div>`;
+
+    html += `<div class="card"><h3>Chores</h3>`;
+    data.chores.filter(c=>c.kid == document.getElementById("kidSelect").value)
+      .forEach((c,i)=>{
+        html += `<div>
+          ${c.name} (${c.pts})
+          ${c.done ? "✅" : `<button class="blue" onclick="completeChore(${i})">Done</button>`}
+        </div>`;
+      });
+    html += `</div>`;
+  }
+
+  if(mode === "parent") {
+    html += `<div class="card big">👨‍👩‍👧 Parent Control</div>`;
+
+    html += `
       <div class="card">
-        ${c.name} - ${c.pts} pts
-        ${!c.done ? `<button class="blue" onclick="markDone(${i})">Mark Done</button>` : "✅ Done"}
+        <h3>Add Chore</h3>
+        <input id="choreName" placeholder="Chore">
+        <input id="chorePoints" type="number" placeholder="Points">
+        <button class="green" onclick="addChore()">Add</button>
       </div>
     `;
-  });
 
-  let lb = document.getElementById('leaderboard');
-  lb.innerHTML = `
-    <div>Kid 1: ${points.Kid1}</div>
-    <div>Kid 2: ${points.Kid2}</div>
-  `;
+    html += `<div class="card"><h3>Pending Approval</h3>`;
+    data.chores.forEach((c,i)=>{
+      if(c.done && !c.approved){
+        html += `<div>
+          ${c.name} - ${c.pts} pts
+          <button class="green" onclick="approveChore(${i})">Approve</button>
+        </div>`;
+      }
+    });
+    html += `</div>`;
+
+    html += `
+      <div class="card">
+        <h3>Add Reward</h3>
+        <input id="rewardName" placeholder="Reward">
+        <input id="rewardCost" type="number" placeholder="Cost">
+        <button class="yellow" onclick="addReward()">Add</button>
+      </div>
+    `;
+  }
+
+  if(mode === "kid" || mode === "parent") {
+    html += `<div class="card"><h3>Rewards</h3>`;
+    data.rewards.forEach(r=>{
+      html += `<div>${r.name} - ${r.cost} pts</div>`;
+    });
+    html += `</div>`;
+  }
+
+  app.innerHTML = html;
 }
 
 render();
@@ -106,4 +194,3 @@ render();
 
 </body>
 </html>
-
