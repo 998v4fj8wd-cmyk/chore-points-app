@@ -1,1 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chore Points</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial; margin: 0; background:#f4f4f4; }
+    .header { background:#333; color:white; padding:15px; text-align:center; font-size:22px; }
+    .container { padding:15px; }
+
+    .card { background:white; padding:15px; margin:10px 0; border-radius:10px; }
+
+    button {
+      padding:10px;
+      margin:5px;
+      border:0;
+      border-radius:8px;
+      cursor:pointer;
+    }
+
+    .green { background: #4CAF50; color:white; }
+    .blue { background: #2196F3; color:white; }
+    .red { background: #f44336; color:white; }
+
+    input {
+      padding:8px;
+      margin:5px 0;
+      width:100%;
+    }
+
+    .big { font-size:24px; text-align:center; }
+  </style>
+</head>
+
+<body>
+
+<div class="header">Family Chore Points</div>
+
+<div class="container">
+
+  <div class="card">
+    <h3>Add Chore (Parent)</h3>
+    <input id="choreName" placeholder="Chore name">
+    <input id="points" type="number" placeholder="Points">
+    <button class="green" onclick="addChore()">Add</button>
+  </div>
+
+  <div class="card">
+    <h3>Chores</h3>
+    <div id="chores"></div>
+  </div>
+
+  <div class="card">
+    <h3 class="big">Leaderboard</h3>
+    <div id="leaderboard"></div>
+  </div>
+
+</div>
+
+<script>
+let chores = [];
+let points = { Kid1: 0, Kid2: 0 };
+
+function addChore() {
+  let name = document.getElementById('choreName').value;
+  let pts = parseInt(document.getElementById('points').value);
+
+  if (!name || !pts) return;
+
+  chores.push({ name, pts, done:false });
+  render();
+}
+
+function markDone(index) {
+  let chore = chores[index];
+  if (chore.done) return;
+
+  chore.done = true;
+  points.Kid1 += chore.pts;
+
+  render();
+}
+
+function render() {
+  let cDiv = document.getElementById('chores');
+  cDiv.innerHTML = "";
+
+  chores.forEach((c, i) => {
+    cDiv.innerHTML += `
+      <div class="card">
+        ${c.name} - ${c.pts} pts
+        ${!c.done ? `<button class="blue" onclick="markDone(${i})">Mark Done</button>` : "✅ Done"}
+      </div>
+    `;
+  });
+
+  let lb = document.getElementById('leaderboard');
+  lb.innerHTML = `
+    <div>Kid 1: ${points.Kid1}</div>
+    <div>Kid 2: ${points.Kid2}</div>
+  `;
+}
+
+render();
+</script>
+
+</body>
+</html>
 
