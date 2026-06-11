@@ -4,17 +4,17 @@
   <title>Family Points System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial; margin:0; background:#111; color:white; }
-    .header { background:#222; padding:20px; text-align:center; font-size:26px; }
-    .tabs { display:flex; justify-content:center; gap:10px; padding:10px; flex-wrap:wrap; }
-    button { padding:12px 16px; border:none; border-radius:10px; cursor:pointer; font-size:16px; }
-    .card { background:#1e1e1e; margin:10px; padding:15px; border-radius:12px; }
+    body { font-family: Arial; margin:0; background:#0f0f0f; color:white; }
+    .header { background:#1f1f1f; padding:18px; text-align:center; font-size:24px; }
+    .tabs { display:flex; justify-content:center; gap:8px; padding:10px; flex-wrap:wrap; }
+    button { padding:10px 14px; border:none; border-radius:10px; cursor:pointer; font-size:14px; }
+    .card { background:#1c1c1c; margin:10px; padding:15px; border-radius:12px; }
     input, select { width:100%; padding:10px; margin:5px 0; border-radius:8px; border:none; }
     .green { background:#4CAF50; color:white; }
     .blue { background:#2196F3; color:white; }
     .red { background:#f44336; color:white; }
     .yellow { background:#ff9800; color:white; }
-    .big { font-size:28px; text-align:center; }
+    .big { font-size:26px; text-align:center; }
   </style>
 </head>
 
@@ -57,8 +57,7 @@ function setMode(m) {
 }
 
 function getKid() {
-  let i = document.getElementById("kidSelect").value;
-  return data.kids[i];
+  return data.kids[document.getElementById("kidSelect").value];
 }
 
 function renderKidsDropdown() {
@@ -69,20 +68,46 @@ function renderKidsDropdown() {
   });
 }
 
+/* ---------------- KIDS (PROFILES) ---------------- */
+
+function addKid() {
+  let name = document.getElementById("kidName").value;
+  if(!name) return;
+
+  data.kids.push({ name, points: 0 });
+  save();
+  render();
+}
+
+function deleteKid(i) {
+  data.kids.splice(i,1);
+  save();
+  render();
+}
+
+/* ---------------- CHORES ---------------- */
+
 function addChore() {
   let name = document.getElementById("choreName").value;
   let pts = parseInt(document.getElementById("chorePoints").value);
+  let kid = document.getElementById("kidSelect").value;
 
   if(!name || !pts) return;
 
   data.chores.push({
     name,
     pts,
-    kid: document.getElementById("kidSelect").value,
+    kid,
     done:false,
     approved:false
   });
 
+  save();
+  render();
+}
+
+function deleteChore(i) {
+  data.chores.splice(i,1);
   save();
   render();
 }
@@ -104,6 +129,8 @@ function approveChore(i) {
   render();
 }
 
+/* ---------------- REWARDS ---------------- */
+
 function addReward() {
   let name = document.getElementById("rewardName").value;
   let cost = parseInt(document.getElementById("rewardCost").value);
@@ -115,14 +142,22 @@ function addReward() {
   render();
 }
 
+function deleteReward(i) {
+  data.rewards.splice(i,1);
+  save();
+  render();
+}
+
+/* ---------------- UI ---------------- */
+
 function render() {
   renderKidsDropdown();
 
-  let kid = getKid();
   let app = document.getElementById("app");
-
+  let kid = getKid();
   let html = "";
 
+  /* ECHO MODE */
   if(mode === "echo") {
     html += `<div class="card big">📊 Leaderboard</div>`;
     data.kids.forEach(k=>{
@@ -130,61 +165,102 @@ function render() {
     });
   }
 
+  /* KID MODE */
   if(mode === "kid") {
     html += `<div class="card big">🧒 Kid View</div>`;
     html += `<div class="card">Points: ${kid.points}</div>`;
 
     html += `<div class="card"><h3>Chores</h3>`;
     data.chores.filter(c=>c.kid == document.getElementById("kidSelect").value)
-      .forEach((c,i)=>{
-        html += `<div>
+    .forEach((c,i)=>{
+      html += `
+        <div>
           ${c.name} (${c.pts})
           ${c.done ? "✅" : `<button class="blue" onclick="completeChore(${i})">Done</button>`}
-        </div>`;
-      });
+        </div>
+      `;
+    });
     html += `</div>`;
   }
 
+  /* PARENT MODE */
   if(mode === "parent") {
+
     html += `<div class="card big">👨‍👩‍👧 Parent Control</div>`;
 
+    /* ADD KID */
+    html += `
+      <div class="card">
+        <h3>Add Kid</h3>
+        <input id="kidName" placeholder="Kid name">
+        <button class="green" onclick="addKid()">Add Kid</button>
+      </div>
+    `;
+
+    /* MANAGE KIDS */
+    html += `<div class="card"><h3>Kids</h3>`;
+    data.kids.forEach((k,i)=>{
+      html += `
+        <div>
+          ${k.name} (${k.points} pts)
+          <button class="red" onclick="deleteKid(${i})">Delete</button>
+        </div>
+      `;
+    });
+    html += `</div>`;
+
+    /* ADD CHORE */
     html += `
       <div class="card">
         <h3>Add Chore</h3>
         <input id="choreName" placeholder="Chore">
         <input id="chorePoints" type="number" placeholder="Points">
-        <button class="green" onclick="addChore()">Add</button>
+        <button class="green" onclick="addChore()">Add Chore</button>
       </div>
     `;
 
-    html += `<div class="card"><h3>Pending Approval</h3>`;
+    /* MANAGE CHORES */
+    html += `<div class="card"><h3>Chores</h3>`;
     data.chores.forEach((c,i)=>{
-      if(c.done && !c.approved){
-        html += `<div>
+      html += `
+        <div>
           ${c.name} - ${c.pts} pts
-          <button class="green" onclick="approveChore(${i})">Approve</button>
-        </div>`;
-      }
+          ${!c.approved && c.done ? `<button class="green" onclick="approveChore(${i})">Approve</button>` : ""}
+          <button class="red" onclick="deleteChore(${i})">Delete</button>
+        </div>
+      `;
     });
     html += `</div>`;
 
+    /* ADD REWARD */
     html += `
       <div class="card">
         <h3>Add Reward</h3>
         <input id="rewardName" placeholder="Reward">
         <input id="rewardCost" type="number" placeholder="Cost">
-        <button class="yellow" onclick="addReward()">Add</button>
+        <button class="yellow" onclick="addReward()">Add Reward</button>
       </div>
     `;
-  }
 
-  if(mode === "kid" || mode === "parent") {
+    /* MANAGE REWARDS */
     html += `<div class="card"><h3>Rewards</h3>`;
-    data.rewards.forEach(r=>{
-      html += `<div>${r.name} - ${r.cost} pts</div>`;
+    data.rewards.forEach((r,i)=>{
+      html += `
+        <div>
+          ${r.name} - ${r.cost} pts
+          <button class="red" onclick="deleteReward(${i})">Delete</button>
+        </div>
+      `;
     });
     html += `</div>`;
   }
+
+  /* SHARED REWARDS VIEW */
+  html += `<div class="card"><h3>Rewards</h3>`;
+  data.rewards.forEach(r=>{
+    html += `<div>${r.name} - ${r.cost} pts</div>`;
+  });
+  html += `</div>`;
 
   app.innerHTML = html;
 }
